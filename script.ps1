@@ -28,20 +28,46 @@ $imported_users = Import-Csv "$work_dir\input.csv"
 
 Get-ChildItem $users_dir -Directory | select -ExpandProperty name | ForEach-Object {
     #Assigning variables based on folder name
-    $dir_first = $_.split(" ")[1]
-    $dir_last = $_.split(" ")[0].replace(",","")
-    $dir_last_svc = $_.split(" ")[3]
-    $dir_acct = $_.split(" ")[-1]
+    $split = $_.split(" ")
+    $no_elements = $split.count
+    $IsRenamed=$true
+    switch ($no_elements)
+    {
+        4 {
+        #Write-host "Folder has $no_elements elements. Looks like it's not renamed."
+        $IsRenamed=$false
+        $dir_last = $split[0]
+        $dir_first = $split[1]
+        $dir_birth = $split[2]
+        $dir_last_svc = $split[3]
+        }
+        5 {
+        #Write-host "Folder has $no_elements elements. Looks like  it is renamed."
+        $dir_last = $split[0]
+        $dir_first = $split[1]
+        $dir_birth = $split[2]
+        $dir_acct = $split[3]
+        $dir_last_svc = $split[4]
+        }
+        Default {
+        Write-host "Folder has $no_elements elements. THis is not expected"
+        break}
+    }
+
     
     $acct = $null
 
+
     #Getting ACCT value from imported file based on folder variables
-    $acct = $imported_users | Where-Object {$_.Last -eq $dir_last -and $_.First -eq $dir_first -and $_.Last_svc -eq $dir_last_svc} | select -ExpandProperty acct
+    $acct = $imported_users | Where-Object {$_.Last -eq $dir_last.replace(",","") -and $_.First -eq $dir_first -and $_.Last_svc -eq $dir_last_svc} | select -ExpandProperty acct
+    
     
     $old_folder_name = "$users_dir\$_"
     $new_folder_name = $_+" "+$acct
+    $new_folder_name =  $dir_last,$dir_first,$dir_birth,$acct,$dir_last_svc -join " "
     write-host "Old folder name: `"$old_folder_name`"" -ForegroundColor Cyan
-    if ($acct -and $dir_acct -ne $acct)
+    # Rename will happen if $acct is found and has $IsRenamed=$false and 
+    if ($acct -and -not $IsRenamed)
     {
         
         Write-Host "New folder name: `"$users_dir\$new_folder_name.`"" -ForegroundColor Cyan
@@ -69,5 +95,6 @@ Get-ChildItem $users_dir -Directory | select -ExpandProperty name | ForEach-Obje
      $dir_first = $null
      $dir_last = $null
      $dir_last_svc = $Null
+     $dir_acct = $null
 }
 
